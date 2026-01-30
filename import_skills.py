@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """
-Import skills from current directory to Claude Code's global skills directory.
+Import skills from current directory to Claude Code.
 
 This script scans the current directory for skill folders (containing SKILL.md)
-and imports them to ~/.claude/skills/ for use in Claude Code.
+and imports them to either:
+- Global: ~/.claude/skills/ (available in all Claude Code sessions)
+- Local: .claude/skills/ (available only in this project)
 
 Usage:
-    python import_skills.py              # Copy mode (default)
-    python import_skills.py --copy       # Copy mode
+    python import_skills.py              # Import to global (copy mode)
+    python import_skills.py --local      # Import to local project
+    python import_skills.py --global-dir # Import to global directory
+    python import_skills.py --copy       # Copy mode (default)
     python import_skills.py --symlink    # Symlink mode
     python import_skills.py --force      # Overwrite existing skills
 """
@@ -107,8 +111,32 @@ def import_skill_symlink(skill_dir: Path, target_dir: Path, force: bool) -> Tupl
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Import skills to Claude Code's global skills directory",
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        description="Import skills to Claude Code (local or global)",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Import to global directory (default)
+  python import_skills.py
+
+  # Import to local project
+  python import_skills.py --local
+
+  # Import to global with symlink
+  python import_skills.py --global-dir --symlink
+
+  # Update local skills
+  python import_skills.py --local --force
+        """
+    )
+    parser.add_argument(
+        '--local',
+        action='store_true',
+        help='Import to local project .claude/skills/ (project-specific)'
+    )
+    parser.add_argument(
+        '--global-dir',
+        action='store_true',
+        help='Import to global ~/.claude/skills/ (available in all projects) [default]'
     )
     parser.add_argument(
         '--copy',
@@ -134,8 +162,8 @@ def main():
     parser.add_argument(
         '--target', '-t',
         type=Path,
-        default=Path.home() / '.claude' / 'skills',
-        help='Target directory for skills (default: ~/.claude/skills/)'
+        default=None,
+        help='Custom target directory (overrides --local and --global)'
     )
     parser.add_argument(
         '--dry-run',
@@ -151,15 +179,32 @@ def main():
         print("Error: --copy and --symlink are mutually exclusive")
         sys.exit(1)
 
+    # Determine target directory
+    if args.target:
+        # Custom target overrides local/global
+        target_dir = args.target
+        location_type = "custom"
+    elif args.local and args.global_dir:
+        print("Error: --local and --global-dir are mutually exclusive")
+        sys.exit(1)
+    elif args.local:
+        # Local project directory
+        target_dir = args.source / '.claude' / 'skills'
+        location_type = "local project"
+    else:
+        # Global directory (default)
+        target_dir = Path.home() / '.claude' / 'skills'
+        location_type = "global"
+
     # Setup target directory
-    target_dir = args.target
     if not args.dry_run:
         target_dir.mkdir(parents=True, exist_ok=True)
 
     # Find skill directories
     print(f"Scanning '{args.source}' for skills...")
     skill_dirs = find_skill_dirs(args.source)
-    print(f"Found {len(skill_dirs)} skill(s)\n")
+    print(f"Found {len(skill_dirs)} skill(s)")
+    print(f"Target: {target_dir} ({location_type})\n")
 
     # Import each skill
     success_count = 0
@@ -189,10 +234,11 @@ def main():
     # Summary
     print(f"\n{'='*60}")
     print(f"Import complete!")
+    print(f"  Location: {location_type}")
     print(f"  Imported: {success_count}")
     print(f"  Skipped:  {skip_count}")
     print(f"  Errors:   {error_count}")
-    print(f"Target:    {target_dir}")
+    print(f"  Target:   {target_dir}")
     print(f"{'='*60}")
 
     if error_count > 0:

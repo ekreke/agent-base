@@ -13,41 +13,60 @@ agent-base/
 
 ## Importing Skills
 
-This project includes a script to import skills to Claude Code's global skills directory (`~/.claude/skills/`).
+This project includes a script to import skills to Claude Code.
+
+### Import Locations
+
+The script supports two import locations:
+
+- **Global** (`~/.claude/skills/`): Skills are available in all Claude Code sessions
+- **Local** (`.claude/skills/`): Skills are available only in this project
 
 ### Usage
 
 ```bash
-# Default: Copy skills from current directory
+# Import to global directory (default)
 python3 import_skills.py
+
+# Import to local project directory
+python3 import_skills.py --local
 
 # Symlink mode (useful for development - changes sync automatically)
 python3 import_skills.py --symlink
+python3 import_skills.py --local --symlink
 
 # Force overwrite existing skills
 python3 import_skills.py --force
 
 # Dry run - preview what would be done
 python3 import_skills.py --dry-run
+python3 import_skills.py --local --dry-run
 
 # Custom source directory
 python3 import_skills.py --source ./my-skills
 
-# Custom target directory
+# Custom target directory (overrides --local/--global-dir)
 python3 import_skills.py --target ~/.claude/skills/
 ```
 
 ### Examples
 
 ```bash
-# Import all skills from current directory
+# Import skills to global directory (available everywhere)
 python3 import_skills.py
 
-# Import from a subdirectory
-python3 import_skills.py --source ./skills
+# Import skills to local project (project-specific)
+python3 import_skills.py --local
 
-# Update existing skills (force mode)
-python3 import_skills.py --force --symlink
+# Development setup with symlinks
+python3 import_skills.py --symlink
+python3 import_skills.py --local --symlink
+
+# Update existing skills
+python3 import_skills.py --force --local
+
+# Preview before importing
+python3 import_skills.py --local --dry-run
 ```
 
 ## skill-creator
@@ -62,7 +81,11 @@ The `skill-creator` is a meta-skill that helps you create new skills. It provide
 To use skill-creator, first import it to Claude Code:
 
 ```bash
+# Import to global (recommended for reuse across projects)
 python3 import_skills.py
+
+# Or import to local project only
+python3 import_skills.py --local
 ```
 
 Then you can use it in Claude Code by describing the skill you want to create.

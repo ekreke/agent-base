@@ -1,0 +1,47 @@
+CLAUDE CODE CONTENT REVIEW SUMMARY
+==================================
+
+Generated: {{timestamp}}
+Scope: {{scope}}
+
+QUICK STATS
+-----------
+Items Reviewed: {{total_items}}
+  Skills: {{skill_count}}
+  Subagents: {{subagent_count}}
+
+Total Findings: {{total_findings}}
+  P0 (Critical): {{p0_count}}
+  P1 (High): {{p1_count}}
+  P2 (Medium): {{p2_count}}
+  P3 (Low): {{p3_count}}
+  P4 (Enhancement): {{p4_count}}
+
+TOP 5 ISSUES TO FIX
+-------------------
+{{#each top_issues}}
+{{rank}}. [{{priority}}] {{issue}}
+   Location: {{location}}
+   Effort: {{effort}}
+   Impact: {{impact}}
+
+{{/each}}
+
+QUICK WINS
+----------
+{{#each quick_wins}}
+• {{description}} ({{effort}}, {{impact}})
+{{/each}}
+
+OVERALL ASSESSMENT
+------------------
+{{overall_assessment}}
+
+NEXT STEPS
+----------
+1. Address all P0 issues immediately
+2. Plan P1 fixes for next iteration
+3. Review P2 items during regular maintenance
+4. Consider P3/P4 items for future enhancements
+
+For detailed findings, see the full report.

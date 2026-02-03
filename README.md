@@ -6,9 +6,18 @@ AI skills and subagents baseline project.
 
 ```
 agent-base/
-├── skill-creator/       # Tool for creating other skills
-├── import_skills.py     # Script to import skills to Claude Code
-└── README.md           # This file
+├── skills/              # Source directory for skill definitions
+│   ├── skill-creator/  # Meta-skill for creating new skills
+│   └── mcp-builder/    # MCP server building skill
+├── subagents/           # Source directory for complex autonomous agents
+│   ├── stress-test/    # Comprehensive stress testing agent
+│   └── git-diff-reviewer/  # Git diff review agent
+├── .claude/            # Local deployment target (git-ignored)
+│   ├── skills/         # Local skill imports
+│   └── agents/         # Local agent configurations
+├── import_skills.py    # Script to import skills/subagents
+├── CLAUDE.md          # Project instructions for Claude Code
+└── README.md          # This file
 ```
 
 ## Importing Skills
@@ -69,7 +78,11 @@ python3 import_skills.py --force --local
 python3 import_skills.py --local --dry-run
 ```
 
-## skill-creator
+## Skills
+
+See [skills/README.md](skills/README.md) for detailed information about available skills.
+
+### skill-creator
 
 The `skill-creator` is a meta-skill that helps you create new skills. It provides:
 
@@ -77,6 +90,18 @@ The `skill-creator` is a meta-skill that helps you create new skills. It provide
 - `init_skill.py` - Script to initialize new skill templates
 - `package_skill.py` - Script to package skills into .skill files
 - Best practices and design patterns
+
+See [skills/skill-creator/README.md](skills/skill-creator/README.md) for more details.
+
+### mcp-builder
+
+The `mcp-builder` skill provides comprehensive guidance for creating MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools.
+
+See [skills/mcp-builder/README.md](skills/mcp-builder/README.md) for more details.
+
+## Subagents
+
+See [subagents/README.md](subagents/README.md) for detailed information about available subagents.
 
 To use skill-creator, first import it to Claude Code:
 

@@ -1,27 +1,29 @@
 #!/usr/bin/env python3
 """
-Import skills from current directory to Claude Code.
+Import skills to Claude Code.
 
-This script scans the current directory for skill folders (containing SKILL.md)
-and imports them to either:
+This script scans for skill folders (containing SKILL.md) and imports them
+to either:
 - Global: ~/.claude/skills/ (available in all Claude Code sessions)
 - Local: .claude/skills/ (available only in this project)
 
 Usage:
-    python import_skills.py              # Import to global (copy mode)
+    python import_skills.py              # Import from ./skills/ to global
     python import_skills.py --local      # Import to local project
     python import_skills.py --global-dir # Import to global directory
     python import_skills.py --copy       # Copy mode (default)
     python import_skills.py --symlink    # Symlink mode
     python import_skills.py --force      # Overwrite existing skills
+    python import_skills.py --source DIR # Scan custom directory
 """
 
 import os
 import sys
 import shutil
 import argparse
+import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 
 def is_skill_dir(path: Path) -> bool:
@@ -38,11 +40,56 @@ def find_skill_dirs(scan_dir: Path) -> List[Path]:
     skill_dirs = [d for d in scan_dir.iterdir() if is_skill_dir(d)]
 
     if not skill_dirs:
-        print(f"No skill directories found in '{scan_dir}'")
+        print(f"Warning: No skill directories found in '{scan_dir}'")
         print("A skill directory must contain a SKILL.md file.")
-        sys.exit(1)
 
     return skill_dirs
+
+
+def extract_yaml_field(content: str, field_name: str) -> Optional[str]:
+    """
+    Extract a field value from YAML frontmatter with robust parsing.
+
+    Handles:
+    - Comments (lines starting with #)
+    - Quoted values (single and double quotes)
+    - Values with colons in them (e.g., URLs)
+    - Whitespace around colons
+    """
+    # Split into frontmatter and body
+    parts = content.split('---', 2)
+    if len(parts) < 3:
+        return None
+
+    frontmatter = parts[1]
+
+    # Filter out comments and empty lines
+    lines = [
+        line for line in frontmatter.split('\n')
+        if line.strip() and not line.strip().startswith('#')
+    ]
+
+    # Pattern to match: field: value
+    # Handles:
+    # - name: simple-value
+    # - name: "quoted value"
+    # - name: 'single quoted'
+    # - name: value:with:colons
+    pattern = rf'^{re.escape(field_name)}\s*:\s*(.+)$'
+
+    for line in lines:
+        match = re.match(pattern, line.strip())
+        if match:
+            value = match.group(1).strip()
+
+            # Remove quotes if present
+            if (value.startswith('"') and value.endswith('"')) or \
+               (value.startswith("'") and value.endswith("'")):
+                value = value[1:-1]
+
+            return value
+
+    return None
 
 
 def get_skill_name(skill_dir: Path) -> str:
@@ -51,15 +98,11 @@ def get_skill_name(skill_dir: Path) -> str:
 
     try:
         with open(skill_md, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
+            content = f.read()
 
-        # Parse YAML frontmatter
-        if lines and lines[0].strip() == '---':
-            for line in lines[1:]:
-                if line.strip() == '---':
-                    break
-                if line.startswith('name:'):
-                    return line.split(':', 1)[1].strip()
+        name = extract_yaml_field(content, 'name')
+        if name:
+            return name
     except Exception as e:
         print(f"Warning: Could not read SKILL.md: {e}")
 
@@ -76,12 +119,33 @@ def import_skill_copy(skill_dir: Path, target_dir: Path, force: bool) -> Tuple[b
     if target_path.exists():
         if not force:
             return False, f"Skipped (already exists): {skill_name}"
-        shutil.rmtree(target_path)
 
     try:
-        shutil.copytree(skill_dir, target_path)
+        # Use a temporary directory for atomic operation
+        # This prevents data loss if copy fails
+        temp_path = target_dir / f".{skill_name}.tmp"
+        if temp_path.exists():
+            shutil.rmtree(temp_path)
+
+        # Copy to temporary location first
+        shutil.copytree(skill_dir, temp_path)
+
+        # If target exists, remove it after successful copy
+        if target_path.exists():
+            shutil.rmtree(target_path)
+
+        # Move temporary to final location
+        temp_path.rename(target_path)
+
         return True, f"Copied: {skill_name}"
     except Exception as e:
+        # Clean up temporary directory if it exists
+        temp_path = target_dir / f".{skill_name}.tmp"
+        if temp_path.exists():
+            try:
+                shutil.rmtree(temp_path)
+            except Exception:
+                pass
         return False, f"Error copying {skill_name}: {e}"
 
 
@@ -115,17 +179,20 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Import to global directory (default)
+  # Import from ./skills/ to global directory (default)
   python import_skills.py
 
-  # Import to local project
+  # Import from ./skills/ to local project
   python import_skills.py --local
 
-  # Import to global with symlink
-  python import_skills.py --global-dir --symlink
+  # Import from ./subagents/ to global with symlink
+  python import_skills.py --source ./subagents --symlink
 
-  # Update local skills
+  # Update local skills (force overwrite)
   python import_skills.py --local --force
+
+  # Preview before importing
+  python import_skills.py --dry-run
         """
     )
     parser.add_argument(
@@ -156,8 +223,8 @@ Examples:
     parser.add_argument(
         '--source', '-s',
         type=Path,
-        default=Path.cwd(),
-        help='Source directory to scan for skills (default: current directory)'
+        default=Path.cwd() / 'skills',
+        help='Source directory to scan for skills (default: ./skills/)'
     )
     parser.add_argument(
         '--target', '-t',
@@ -188,8 +255,8 @@ Examples:
         print("Error: --local and --global-dir are mutually exclusive")
         sys.exit(1)
     elif args.local:
-        # Local project directory
-        target_dir = args.source / '.claude' / 'skills'
+        # Local project directory (always relative to current working directory, not source)
+        target_dir = Path.cwd() / '.claude' / 'skills'
         location_type = "local project"
     else:
         # Global directory (default)

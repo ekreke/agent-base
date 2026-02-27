@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nanobot
+  labels:
+    app: nanobot
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nanobot
+  template:
+    metadata:
+      labels:
+        app: nanobot
+    spec:
+      containers:
+      - name: nanobot
+        image: docker.io/library/nanobot:latest
+        imagePullPolicy: Never
+        command: ["nanobot", "gateway"]
+        ports:
+        - containerPort: 18790
+          name: gateway
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: "250m"
+            memory: 256Mi
+        volumeMounts:
+        - name: config
+          mountPath: /root/.nanobot
+      volumes:
+      - name: config
+        hostPath:
+          path: /home/ubuntu/.nanobot
+          type: DirectoryOrCreate

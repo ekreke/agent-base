@@ -12,6 +12,8 @@ agent-base/
 ├── subagents/           # Source directory for complex autonomous agents
 │   ├── stress-test/    # Comprehensive stress testing agent
 │   └── git-diff-reviewer/  # Git diff review agent
+├── nanobot/            # AI 服务部署配置
+│   └── k3s/           # k3s 集群部署配置和文档
 ├── .claude/            # Local deployment target (git-ignored)
 │   ├── skills/         # Local skill imports
 │   └── agents/         # Local agent configurations
@@ -114,3 +116,35 @@ python3 import_skills.py --local
 ```
 
 Then you can use it in Claude Code by describing the skill you want to create.
+
+## Deployments
+
+部署配置和文档，用于快速部署 AI 相关服务到 k3s 集群。
+
+### nanobot/k3s
+
+Nanobot AI 服务的 k3s 部署配置，包含：
+
+- **deployment.yaml** - 2 副本部署配置
+- **service.yaml** - NodePort 服务暴露 (30090)
+- **kustomization.yaml** - Kustomize 配置
+- **README.md** - 完整的部署指南和问题排查
+
+快速开始：
+
+```bash
+# 1. 构建镜像
+cd /path/to/nanobot
+docker build -t nanobot:latest .
+
+# 2. 导入到 k3s
+docker save nanobot:latest | sudo k3s ctr images import -
+
+# 3. 部署
+cd /path/to/agent-base/nanobot/k3s
+kubectl apply -k .
+
+# 详细文档参见: nanobot/k3s/README.md
+```
+
+**参见:** [nanobot/k3s/README.md](nanobot/k3s/README.md)

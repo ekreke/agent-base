@@ -1,0 +1,38 @@
+{
+  "botIdentity": {
+    "id": "nanobot-master",
+    "type": "master",
+    "namespace": "nanobot"
+  },
+  "agents": {
+    "defaults": {
+      "model": "anthropic/claude-opus-4-5"
+    }
+  },
+  "providers": {
+    "openrouter": {
+      "apiKey": "YOUR_OPENROUTER_API_KEY"
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "token": "YOUR_TELEGRAM_BOT_TOKEN",
+      "allowFrom": ["YOUR_ADMIN_USER_ID"]
+    }
+  },
+  "tools": {
+    "restrictToWorkspace": false,
+    "mcpServers": {
+      "filesystem": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"]
+      }
+    }
+  },
+  "cluster": {
+    "slaves": [],
+    "healthCheckInterval": 300,
+    "alertChannel": "telegram"
+  }
+}

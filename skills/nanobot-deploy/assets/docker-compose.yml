@@ -1,0 +1,67 @@
+# Docker Compose for Nanobot Cluster Deployment
+# This file defines a master bot and multiple slave bots
+
+services:
+  # Master Bot - Management and monitoring
+  nanobot-master:
+    image: ghcr.io/hkuds/nanobot:latest
+    container_name: nanobot-master
+    restart: unless-stopped
+    ports:
+      - "18790:18790"
+    volumes:
+      - ./data/master/config:/root/.nanobot
+      - ./data/master/workspace:/root/.nanobot/workspace
+      - ./data/master/skills:/root/.nanobot/skills:ro
+      - /var/run/docker.sock:/var/run/docker.sock  # For container management
+    environment:
+      - BOT_TYPE=master
+      - NAMESPACE=nanobot
+    networks:
+      - nanobot-net
+
+  # Slave Bot 1 - General worker
+  nanobot-slave-1:
+    image: ghcr.io/hkuds/nanobot:latest
+    container_name: nanobot-slave-1
+    restart: unless-stopped
+    ports:
+      - "18791:18790"
+    volumes:
+      - ./data/slave-1/config:/root/.nanobot
+      - ./data/slave-1/workspace:/root/.nanobot/workspace
+      - ./data/slave-1/skills:/root/.nanobot/skills:ro
+    environment:
+      - BOT_TYPE=slave
+      - BOT_ID=worker-1
+      - NAMESPACE=nanobot
+      - MASTER_ENDPOINT=http://nanobot-master:18790
+    depends_on:
+      - nanobot-master
+    networks:
+      - nanobot-net
+
+  # Slave Bot 2 - Another worker
+  nanobot-slave-2:
+    image: ghcr.io/hkuds/nanobot:latest
+    container_name: nanobot-slave-2
+    restart: unless-stopped
+    ports:
+      - "18792:18790"
+    volumes:
+      - ./data/slave-2/config:/root/.nanobot
+      - ./data/slave-2/workspace:/root/.nanobot/workspace
+      - ./data/slave-2/skills:/root/.nanobot/skills:ro
+    environment:
+      - BOT_TYPE=slave
+      - BOT_ID=worker-2
+      - NAMESPACE=nanobot
+      - MASTER_ENDPOINT=http://nanobot-master:18790
+    depends_on:
+      - nanobot-master
+    networks:
+      - nanobot-net
+
+networks:
+  nanobot-net:
+    driver: bridge
